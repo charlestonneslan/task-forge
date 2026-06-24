@@ -1,11 +1,35 @@
 from app import schemas
 from datetime import datetime
-import time
+import sqlite3
 
 def test_health_endpoint(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+def test_add_user(client):
+    response = client.post("/register", json={"email": "charlie@gmail.com", "password": "password123"})
+    data = schemas.UserOut(**response.json())
+    assert response is not None
+    assert response.status_code == 201
+    assert data.id == 1
+    assert data.email == "charlie@gmail.com"
+    assert "created_at" in response.json()
+    assert "password" not in response.json() and "password_hash" not in response.json()
+
+def test_password_stored_as_argon2_hash(client, tmp_path):
+    client.post("/register", json={"email": "charlie@gmail.com", "password": "password123"})
+
+    conn = sqlite3.connect(tmp_path / "test.db")
+    stored = conn.execute("SELECT password_hash FROM users WHERE email = ?", ("charlie@gmail.com",)).fetchone()[0]
+    conn.close()
+    assert stored != "password123" and stored.startswith("$argon2")
+
+def test_duplicate_email_returns_409(client):
+    client.post("/register", json={"email": "charlie@gmail.com", "password": "password123"})
+    response = client.post("/register", json={"email": "charlie@gmail.com", "password": "password123"})
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Email already registered"
 
 def test_add_task(client):
     response = client.post("/tasks", json={"title": "Title", "description": "Description", "status": "todo"})

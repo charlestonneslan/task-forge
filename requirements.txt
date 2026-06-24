@@ -3,3 +3,5 @@ pytest==9.1.1
 httpx==0.28.1
 uvicorn[standard]==0.49.0
 pydantic-settings==2.14.2
+argon2-cffi==25.1.0
+email_validator==2.3.0

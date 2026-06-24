@@ -4,6 +4,13 @@ from datetime import datetime, timezone
 import pytest
 import sqlite3
 
+def test_add_user(db_conn):
+    result = db.add_user(db_conn, {"email": "charlie@gmail.com", "password_hash": "blahblahblah"})
+    assert result is not None
+    assert result["id"] == 1
+    assert result["email"] == "charlie@gmail.com"
+    assert "password_hash" not in result
+
 def test_add_task(db_conn):
     result = db.add_task(db_conn, {"title": "Title", "description": "Description", "status": TaskStatus.todo})
     assert result is not None   

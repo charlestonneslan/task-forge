@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from app import db
 from app import schemas
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from argon2 import PasswordHasher
 
 def get_db():
     conn = db.get_database_connection()
@@ -18,10 +18,21 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+ph = PasswordHasher()
 
 @app.get("/health")
 def get_health():
     return {"status": "ok"}
+
+@app.post("/register", status_code=201, response_model=schemas.UserOut)
+def add_user(user: schemas.UserCreate, conn = Depends(get_db)):
+    user_payload = user.model_dump(mode="json")
+    password = user_payload["password"]
+    hashed_password = ph.hash(password)
+    row = db.add_user(conn, {"email": user_payload["email"], "password_hash": hashed_password})
+    if row is None:
+        raise HTTPException(409, detail="Email already registered")
+    return row
 
 @app.post("/tasks", status_code=201, response_model=schemas.TaskOut)
 def add_task(task: schemas.TaskCreate, conn = Depends(get_db)):
