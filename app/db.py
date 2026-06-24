@@ -6,6 +6,7 @@ def get_database_connection():
     return sqlite3.connect(settings.database_path)
 
 def init_db(conn):
+    cursor = conn.cursor()
     command = '''
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY,
@@ -15,11 +16,38 @@ def init_db(conn):
             CHECK (status IN ('backlog', 'todo', 'in_progress', 'done')),
             created_at TIMESTAMP,
             updated_at TIMESTAMP
-        )
+        );
     '''
-    cursor = conn.cursor()
+    cursor.execute(command)
+    command = '''
+        CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TIMESTAMP,
+                updated_at TIMESTAMP
+            );
+    '''
     cursor.execute(command)
     conn.commit()
+
+def add_user(conn, data: dict):
+    conn.row_factory = sqlite3.Row
+    try:
+        with conn:
+            command = "INSERT INTO users (email, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?)"
+            cursor = conn.cursor()
+            time = datetime.now(timezone.utc).isoformat()
+            cursor.execute(command, (data["email"], data["password_hash"], time, time))
+            conn.commit()
+            id = cursor.lastrowid
+    except sqlite3.IntegrityError as e:
+        return None
+
+    command = "SELECT id, email, created_at FROM users WHERE id = ?"
+    cursor = conn.cursor()
+    cursor.execute(command, (id,))
+    return dict(cursor.fetchone())
 
 def add_task(conn, data: dict):
     conn.row_factory = sqlite3.Row

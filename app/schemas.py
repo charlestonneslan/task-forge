@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 from enum import Enum
 from datetime import datetime
@@ -27,4 +27,12 @@ class TaskOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+class UserCreate(BaseModel):
+    email: str
+    password: str
+
+class UserOut(BaseModel):
+    id: int
+    email: EmailStr
+    created_at: datetime
     
